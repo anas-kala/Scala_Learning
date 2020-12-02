@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Kourse_Akka_Training.iml" filepath="$PROJECT_DIR$/.idea/modules/Kourse_Akka_Training.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Kourse_Akka_Training-build.iml" filepath="$PROJECT_DIR$/.idea/modules/Kourse_Akka_Training-build.iml" />
+    </modules>
+  </component>
+</project>
