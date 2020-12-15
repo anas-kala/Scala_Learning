@@ -4,16 +4,16 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class Fridge {
+public class FridgeClass {
     private int weightCapacity = 1000;
     private int spaceCapacity = 200;
     private static int currentWeightOfContents = 0;
     private static int currentSpaceOfContents = 0;
     private static ArrayList<Product> contents = new ArrayList<>();
     private static ArrayList<String> contentsTypes = new ArrayList<>();           // this fridge is designed to contain five different types of products. orange, apple, watermelon, kiwi, meet
-    private static HashMap<LocalDate,Product> history=new HashMap<>();
+    private static HashMap<LocalDate, Product> history=new HashMap<>();
 
-    public Fridge(int weightCapacity, int spaceCapacity) {
+    public FridgeClass(int weightCapacity, int spaceCapacity) {
         this.weightCapacity = weightCapacity;
         this.spaceCapacity = spaceCapacity;
         contentsTypes.add("apple");
@@ -89,7 +89,7 @@ public class Fridge {
         }
     }
 
-    private void makeCosumizedOrder(Product product, int weight,int space){
+    private void makeCosumizedOrder(Product product, int weight, int space){
         if (enoughSpace(space) && enoughtWeight(weight)) {
             System.out.println(weight + " kilos of " + product.getName() + " has been ordered");
             currentSpaceOfContents -= space;            // reserving space for the order

@@ -13,6 +13,18 @@ public class Product {
         this.price = price;
     }
 
+    public Product(){
+
+    }
+
+    public Product(Product copy){       // deep copy constructor
+        Product newProduct=new Product();
+        newProduct.name=copy.getName();
+        newProduct.space=copy.getSpace();
+        newProduct.weight=copy.getSpace();
+        newProduct.price=copy.getPrice();
+    }
+
     public String getName() {
         return name;
     }
@@ -27,5 +39,21 @@ public class Product {
 
     public int getPrice() {
         return price;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setSpace(int space) {
+        this.space = space;
+    }
+
+    public void setWeight(int weight) {
+        this.weight = weight;
+    }
+
+    public void setPrice(int price) {
+        this.price = price;
     }
 }

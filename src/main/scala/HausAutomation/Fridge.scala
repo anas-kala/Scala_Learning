@@ -1,9 +1,11 @@
 package HausAutomation
 
-import akka.actor.Actor
+import HausAutomation.Fridge.Fridge.{ConsumeFromFridge, PutIntoFridge, PutIntoFridgeGroup, QueryContents}
+import akka.actor.{Actor, ActorSystem, Props}
 
 import java.time.LocalDate
-import scala.util.control.Breaks.break
+import scala.util.control.Breaks.{break, breakable}
+import scala.util.control.ControlThrowable
 
 object Fridge extends App {
   val weightCapacity = 1000
@@ -16,17 +18,18 @@ object Fridge extends App {
 
   object Fridge {
 
-    //    case object GetWeightCapacity
-    //    case object GetSpaceCapacity
-    case class ConsumeFromFridge(product: Product)
+    case class ConsumeFromFridge(name: String)
 
     case class PutIntoFridge(product: Product)
+
+    case class PutIntoFridgeGroup(product: Product, number: Int)
 
     case class MakeOrder(product: Product)
 
     case class MakeCustomizedOrder(product: Product, weight: Int, space: Int)
 
     case class QueryContents(productName: String)
+
   }
 
   class Fridge extends Actor {
@@ -34,20 +37,30 @@ object Fridge extends App {
     import Fridge._
 
     override def receive: Receive = {
-      case ConsumeFromFridge(product) => // when a product runs out from the fridge, it gets automatically ordered.
-        currentSpaceOfContents -= product.getSpace
-        currentWeightOfContents -= product.getWeight
-        contents.foreach(_ => {
-          if (!contentsTypes.contains(product.getName))
-            MakeOrder(product)
-        })
+      case ConsumeFromFridge(name) => // when a product runs out from the fridge, it gets automatically ordered.
+        val pr = consumingProduct(name)
+        if (pr == 0) {
+          val product = new Product()
+          product.setName(name)
+          self ! MakeOrder(product)
+        }
 
       case PutIntoFridge(product) =>
         if (currentSpaceOfContents + product.getSpace <= spaceCapacity && currentWeightOfContents + product.getWeight <= weightCapacity) {
-          contents = contents + product
           currentWeightOfContents += currentWeightOfContents + product.getWeight();
           currentSpaceOfContents += currentSpaceOfContents + product.getSpace();
+          contents = contents + product
         }
+
+      case PutIntoFridgeGroup(product, number) =>
+        (1 to number).foreach(_ => {
+          val prod = new Product()
+          prod.setName(product.getName)
+          prod.setPrice(product.getPrice)
+          prod.setSpace(product.getSpace)
+          prod.setWeight(product.getWeight)
+          self ! PutIntoFridge(prod)
+        })
 
       case MakeOrder(product) =>
         if (product.getName().equals("meet"))
@@ -81,23 +94,45 @@ object Fridge extends App {
           DisplayProductInformation("apple")
         else if (productName.equals("apple"))
           DisplayProductInformation("apple")
+        else if (productName.equals("meet"))
+          DisplayProductInformation("meet")
+
     }
 
 
   }
 
+  def consumingProduct(name: String): Int = {
+    var productsWithName: Set[Product] = Set()
+    contents.foreach(x =>
+      if (x.getName.equalsIgnoreCase(name))
+        productsWithName = productsWithName + x
+    )
+    if (!productsWithName.isEmpty) {
+      contents = contents - productsWithName.head // remove the consumed product from the fridge.
+      currentSpaceOfContents -= productsWithName.head.getSpace
+      currentWeightOfContents -= productsWithName.head.getWeight
+    }
+    if (productsWithName.size <= 2) // if the fridge contains less than 2 of the product, return 0 so that the caller method makes an automatic order.
+      0
+    else
+      productsWithName.size
+  }
+
   def tryOrdering(product: Product, a: Int): Unit = {
-    for (i <- a to 1) {
-      if (enoughSpace(i) && enoughtWeight(i * 5)) {
-        System.out.println(i * 5 + " kilos of " + product.getName() + " has been ordered")
-        currentSpaceOfContents -= i // reserving space for the order
-        currentWeightOfContents -= i * 5 // reserving weight for the order
+     if (enoughSpace(a) && enoughtWeight(a * 5)) {
+        System.out.println(a * 5 + " kilos of " + product.getName() + " have been ordered")
+        currentSpaceOfContents -= a // reserving space for the order
+        currentWeightOfContents -= a * 5 // reserving weight for the order
         // for the history
         val date: LocalDate = LocalDate.now()
         history = history + (date -> product)
-        break;
+       // after 1 second, the order arrives and is placed in the fridge
+       Thread.sleep(1000)
+       for(_ <- 1 to a){
+         PutIntoFridge(product)
+       }
       }
-    }
   }
 
   def enoughSpace(spaceOfOrder: Int) = {
@@ -115,15 +150,40 @@ object Fridge extends App {
   }
 
   def DisplayProductInformation(str: String): Unit = {
-    var count = 0;
-    var space = 0;
-    var weight = 0;
+    var count = 0
+    var space = 0
+    var weight = 0
     contents.foreach(e =>
       if (e.getName().equals(str)) {
-        count += 1;
-        space += e.getSpace();
-        weight = e.getWeight();
+        count += 1
+        space += e.getSpace()
+        weight += e.getWeight()
       })
-    println("of the product " + str + " you still have " + count + ". space used: " + space + ", weight used: " + weight);
+    println("Query results: of the product " + str + " you still have " + count + " pieces. The space used for that is: " + space + " and weight used: " + weight);
   }
+
+  val system = ActorSystem("Fridge")
+  val fridge = system.actorOf(Props[Fridge])
+  fridge ! PutIntoFridge(new Product("apple", 1, 1, 5))
+  fridge ! PutIntoFridge(new Product("apple", 1, 1, 5))
+  fridge ! PutIntoFridge(new Product("meet", 5, 5, 20))
+  fridge ! PutIntoFridge(new Product("kiwi", 1, 1, 5))
+  fridge ! PutIntoFridge(new Product("kiwi", 1, 1, 5))
+  fridge ! PutIntoFridge(new Product("orange", 1, 1, 5))
+  fridge ! PutIntoFridge(new Product("watermelon", 1, 1, 5))
+
+
+  fridge ! PutIntoFridgeGroup(new Product("watermelon", 1, 1, 5), 6)
+  fridge ! PutIntoFridgeGroup(new Product("meet", 1, 1, 5), 6)
+//  Thread.sleep(1000)
+  fridge ! ConsumeFromFridge("kiwi")
+  fridge ! ConsumeFromFridge("kiwi")
+  fridge ! QueryContents("kiwi")
+  fridge ! QueryContents("apple")
+  fridge ! QueryContents("orange")
+  fridge ! QueryContents("meet")
+  fridge ! QueryContents("watermelon")
+  fridge ! ConsumeFromFridge("orange")
+
+
 }
